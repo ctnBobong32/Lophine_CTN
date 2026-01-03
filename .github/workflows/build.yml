@@ -3,22 +3,22 @@ name: Lophine CI
 on:
   push:
     branches:
-      - "**"
+      - "**" # 所有分支
   pull_request:
     branches:
-      - "**"
+      - "**" # 所有分支
   workflow_dispatch:
     inputs:
       force-release:
-        description: "Force disable release if you enter 2, force release if you enter 1, default release if not released else skip release"
+        description: "如果输入 2 则强制禁用释放，如果输入 1 则强制释放，如果不释放则默认释放，否则跳过释放 / Force disable release if you enter 2, force release if you enter 1, default release if not released else skip release"
         required: false
         default: ""
       force-push:
-        description: "Force disable push to repo if you enter 2, force push to repo if you enter 1, default push if not released else skip push repo"
+        description: "如果输入 2，则强制禁用推送到仓库；如果输入 1，则强制推送到仓库；如果未发布则默认推送，否则跳过推送仓库 / Force disable push to repo if you enter 2, force push to repo if you enter 1, default push if not released else skip push repo"
         required: false
         default: ""
       comments:
-        description: "Add comments to release"
+        description: "添加评论以发布 / Add comments to release"
         required: false
         default: ""
 
@@ -29,49 +29,49 @@ jobs:
     runs-on: ubuntu-latest
     environment: default
     steps:
-      - name: Checkout Git Repository
+      - name: 检出 Git 仓库 / Checkout Git Repository
         uses: actions/checkout@v6
 
-      - name: Set Up JDK
+      - name: 设置 JDK / Set Up JDK
         uses: actions/setup-java@v5
         with:
           distribution: zulu
           java-version: 21
 
-      - name: Setup Gradle
+      - name: 设置 Gradle / Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Grant execute permission for gradlew
+      - name: 授予 gradlew 执行权限 / Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Configure Git User Details
+      - name: 配置 Git 用户信息 / Configure Git User Details
         run: git config --global user.email "ci@luminolmc.com" && git config --global user.name "LuminolMC CI"
 
-      - name: Apply All Patches
+      - name: 应用所有补丁 / Apply All Patches
         run: ./gradlew --refresh-dependencies applyAllPatches
 
-      - name: Build Paperclip Jar
+      - name: 构建 Paperclip Jar / Build Paperclip Jar
         run: ./gradlew --refresh-dependencies createMojmapPaperclipJar
 
-      - name: Upload Artifact
+      - name: 上传构件 / Upload Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ env.project_id_b }} CI Artifacts
+          name: ${{ env.project_id_b }} CI 构件
           path: lophine-server/build/libs/*-paperclip-*-mojmap.jar
 
-      - name: Set Environment
+      - name: 设置环境 / Set Environment
         if: github.event_name != 'pull_request'
         run: sh scripts/SetENV.sh
 
-      - name: Check If Release Exists
+      - name: 检查发布是否存在 / Check If Release Exists
         if: github.event_name != 'pull_request' && env.flag_release == 'true'
         run: |
           git fetch --tags
           if [ -n "$(git tag -l "${{ env.tag }}")" ]; then
-            echo "Release already exists"
+            echo "发布已存在 / Release already exists"
             release_exists=true
           else
-            echo "Release does not exist"
+            echo "发布不存在 / Release does not exist"
             release_exists=false
           fi
           if [ "$release_exists" == "true" ]; then
@@ -84,18 +84,18 @@ jobs:
           fi
           echo "release_exists=${release_exists}" >> $GITHUB_ENV
 
-      - name: Check If Branch In Expectations
+      - name: 检查分支是否符合预期 / Check If Branch In Expectations
         if: github.event_name != 'pull_request'
         run: |
           if [[ "$GITHUB_REF_NAME" == ver/* ]] || [[ "$GITHUB_REF_NAME" == exp/* ]] || [[ "$GITHUB_REF_NAME" == dev/* ]]; then
-            echo "Branch is in expected prefixes"
+            echo "分支符合预期前缀 / Branch is in expected prefixes"
             echo "unexpect=false" >> $GITHUB_ENV
           else
-            echo "Branch is NOT in expected prefixes"
+            echo "分支不符合预期前缀 / Branch is NOT in expected prefixes"
             echo "unexpect=true" >> $GITHUB_ENV
           fi
 
-      - name: Publish To Repo
+      - name: 发布到仓库 / Publish To Repo
         if: ( github.event_name != 'pull_request' && !( env.unexpect == 'true' ) && env.flag_release == 'true' && env.release_exists != 'true' && !( inputs.force-release == '2' )) || inputs.force-push == '1'
         continue-on-error: true
         run: ./gradlew --refresh-dependencies generateDevelopmentBundle publish -PpublishDevBundle=true
@@ -103,29 +103,29 @@ jobs:
           PRIVATE_MAVEN_REPO_PASSWORD: ${{ secrets.PRIVATE_MAVEN_REPO_PASSWORD }}
           PRIVATE_MAVEN_REPO_USERNAME: ${{ secrets.PRIVATE_MAVEN_REPO_USERNAME }}
 
-      - name: Create Release - Pre Process
+      - name: 创建发布 - 预处理 / Create Release - Pre Process
         if: ( github.event_name != 'pull_request' && !( env.unexpect == 'true' ) && env.flag_release == 'true' && env.release_exists != 'true' && !(inputs.force-release == '2')) || inputs.force-release == '1'
         run: |
           if [ "${{ inputs.comments }}" == "" ]; then
-            echo "No comments provided"
+            echo "未提供评论 / No comments provided"
             echo "flag_comment=false" >> $GITHUB_ENV
           else
-            echo "Comments provided: ${{ inputs.comments }}"
+            echo "提供的评论: ${{ inputs.comments }} / Comments provided: ${{ inputs.comments }}"
             echo "flag_comment=true" >> $GITHUB_ENV
           fi
 
-      - name: Create Release - No Comment
+      - name: 创建发布 - 无评论 / Create Release - No Comment
         if: env.flag_comment == 'false'
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.tag }}
           name: ${{ env.project_id_b }} ${{ env.mcversion }} - ${{ env.commit_id }}${{ env.release_count }}
           body: |
-            📦Version: `${{ env.mcversion }}` | Commit ${{ env.commit_id }} [![download](https://img.shields.io/github/downloads/LuminolMC/${{ env.project_id }}/${{ env.tag }}/total?color=red&style=flat-square)](https://github.com/LuminolMC/${{ env.project_id }}/releases/download/${{ env.tag }}/${{ env.jar }})
-            This release is automatically compiled by GitHub Actions
-            ### Branch Info
+            📦版本: `${{ env.mcversion }}` | 提交 ${{ env.commit_id }} [![下载](https://img.shields.io/github/downloads/LuminolMC/${{ env.project_id }}/${{ env.tag }}/total?color=red&style=flat-square)](https://github.com/LuminolMC/${{ env.project_id }}/releases/download/${{ env.tag }}/${{ env.jar }})
+            此发布由 GitHub Actions 自动编译
+            ### 分支信息
             > ${{ github.ref_name }}
-            ### Commit Message
+            ### 提交信息
             ${{ env.commit_msg }}
           artifacts: ${{ env.jar_dir }}
           generateReleaseNotes: true
@@ -133,20 +133,20 @@ jobs:
           makeLatest: ${{ env.make_latest }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Release - With Comment
+      - name: 创建发布 - 带评论 / Create Release - With Comment
         if: env.flag_comment == 'true'
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.tag }}
           name: ${{ env.project_id_b }} ${{ env.mcversion }} - ${{ env.commit_id }}${{ env.release_count }}
           body: |
-            📦Version: `${{ env.mcversion }}` | Commit ${{ env.commit_id }} [![download](https://img.shields.io/github/downloads/LuminolMC/${{ env.project_id }}/${{ env.tag }}/total?color=red&style=flat-square)](https://github.com/LuminolMC/${{ env.project_id }}/releases/download/${{ env.tag }}/${{ env.jar }})
-            This release is automatically compiled by GitHub Actions
-            ### Comments
+            📦版本: `${{ env.mcversion }}` | 提交 ${{ env.commit_id }} [![下载](https://img.shields.io/github/downloads/LuminolMC/${{ env.project_id }}/${{ env.tag }}/total?color=red&style=flat-square)](https://github.com/LuminolMC/${{ env.project_id }}/releases/download/${{ env.tag }}/${{ env.jar }})
+            此发布由 GitHub Actions 自动编译
+            ### 评论
             > ${{ inputs.comments }}
-            ### Branch Info
+            ### 分支信息
             > ${{ github.ref_name }}
-            ### Commit Message
+            ### 提交信息
             ${{ env.commit_msg }}
           artifacts: ${{ env.jar_dir }}
           generateReleaseNotes: true
