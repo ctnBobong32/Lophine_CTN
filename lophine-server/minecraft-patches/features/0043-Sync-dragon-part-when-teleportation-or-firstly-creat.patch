@@ -13,7 +13,7 @@ index b31b55f00e2ce1bd6c1011fe852bd1dbb37de524..75c36cbf86e56d4993169688a13f22cc
          if (entity instanceof ThrownEnderpearl enderpearl) {
              this.addEnderPearl(CoordinateUtils.getChunkKey(enderpearl.chunkPosition()), enderpearl.getId()); // Folia - region threading
          }
-+        if (entity instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon) dragon.syncDragonPartsAfterTeleportTransform(); // Lophine - Sync dragon part when teleportation or firstly created
++        if (entity instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon) dragon.syncDragonPartsAfterTeleportTransform(); // luminol - Sync dragon part when teleportation or firstly created
          entity.registerScheduler(); // Paper - optimise Folia entity scheduler
      }
  
@@ -25,8 +25,8 @@ index d03795cd025dd36363002770b7a6a47676ffa6bf..1eee289eb288698a419f6c89e81c0acd
          Entity copy = this.getType().create(destination, EntitySpawnReason.DIMENSION_TRAVEL);
          copy.restoreFrom(this);
          copy.transform(pos, yaw, pitch, velocity);
-+        if (copy instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon) dragon.syncDragonPartsAfterTeleportTransform(); // Lophine - Sync dragon part when teleportation or firstly created
-         if (toSameWorld) copy.notifyLithiumTrackerIfNeeded();// Lophine - region threading for sleeping block entity
++        if (copy instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon) dragon.syncDragonPartsAfterTeleportTransform(); // luminol - Sync dragon part when teleportation or firstly created
+         if (toSameWorld) copy.notifyLithiumTrackerIfNeeded();// luminol - region threading for sleeping block entity
          // vanilla code used to call remove _after_ copying, and some stuff is required to be after copy - so add hook here
          // for example, clearing of inventory after switching dimensions
 diff --git a/net/minecraft/world/entity/boss/enderdragon/EnderDragon.java b/net/minecraft/world/entity/boss/enderdragon/EnderDragon.java
@@ -38,11 +38,11 @@ index 1daf8f52148043339f723aaebdf6135763dd805b..09c794e68e6197d507cbe0b95aee822b
      }
      // CraftBukkit end
 +    
-+    // Lophine start - Sync dragon part when teleportation or firstly created
++    // luminol start - Sync dragon part when teleportation or firstly created
 +    public void syncDragonPartsAfterTeleportTransform() {
 +        for (EnderDragonPart part : this.subEntities) {
 +            this.tickPart(part, 0.0, 0.0, 0.0); // offset -> 0.0
 +        }
 +    }
-+    // Lophine end
++    // luminol end
  }
